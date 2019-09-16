@@ -9,7 +9,8 @@ from fractions import Fraction
 import keyboard
 import time
 
-def CheckCorrectness(src_desc):
+
+def check_correctness(src_desc):
     models = [_ for _ in src_desc["models"].keys()]
     switches = [_ for _ in src_desc["switches"].keys()]
     for switch in src_desc["source"]:
@@ -21,27 +22,33 @@ def CheckCorrectness(src_desc):
                 return True
     return False
 
-def CheckModel(what, where):
+
+def check_model(what, where):
     keys = where.keys()
     for model in what:
-        if model in keys: return False
+        if model in keys:
+            return False
     return True
 
-def CheckSwitch(what, where):
+
+def check_switch(what, where):
     keys = where.keys()
     for switch in what:
-        if switch in keys: return False
+        if switch in keys:
+            return False
     return True
 
-class DiscreteSource():
+
+class DiscreteSource:
     src = dict()
 
     def __init__(self, desc_file):
         try:
             self.src = json.load(desc_file)
-            if CheckCorrectness(src_desc = self.src):
+            if check_correctness(self.src):
                 raise KeyError
             self.current_switch = 0
+            self.current_model = ""
         except KeyError:
             print("KeyError caught. Check file for keys.")
             raise KeyError
@@ -55,38 +62,45 @@ class DiscreteSource():
         self.current_switch = (self.current_switch + 1) % len(self.src["source"])
         self.current_model = random.choices(models, weights=[float(Fraction(i)) for i in weights])[0]
 
+    '''
+        @brief Random sequence generating
+        @param amount size of sequence
+    '''
     # def generate(self, amount, out_file):
     def generate(self, amount):
         size = amount if amount > 0 else 1
-
-        while(size):
+        seq = []
+        while size:
             self.choose_model()
             symbols = [_ for _ in self.src["models"][self.current_model].keys()]
             weights = [_ for _ in self.src["models"][self.current_model].values()]
             out_symbol = random.choices(symbols, weights=[float(Fraction(i)) for i in weights])[0]
             self.current_switch = (self.current_switch + 1) % len(self.src["source"])
             # out_file.write(out_symbol)
-            print(out_symbol, end = '')
+            # print(out_symbol, end='')
             if amount > 0:
+                seq.append(out_symbol)
                 size -= 1
-            elif keyboard.is_pressed('q'):
-                size -= 1
-            time.sleep(0.1)
+            else:
+                print(out_symbol, end='')
+                time.sleep(0.1)
+                if keyboard.is_pressed('q'):
+                    size -= 1
+        return seq
 
-
-
-
-    ### Auxiliary functions
+    '''
+        Auxiliary functions
+    '''
     def print_to_file(self, out_file):
         with open(out_file, "w") as out:
             json.dump(self.src, out, indent=4)
 
     def add_model(self, model_desc):
-        if CheckModel(model_desc, self.src["models"]):
+        if check_model(model_desc, self.src["models"]):
             self.src["models"].update(model_desc)
 
     def add_switch(self, switch_desc):
-        if CheckSwitch(switch_desc, self.src["switches"]):
+        if check_switch(switch_desc, self.src["switches"]):
             self.src["switches"].update(switch_desc)
 
     def add_switch_to_sequence(self, position, switch_name):
